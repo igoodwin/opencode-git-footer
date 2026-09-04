@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "opencode-git-footer",
+  "version": "0.1.0",
+  "description": "OpenCode TUI plugin — custom sidebar footer with git branch + dirty indicator",
+  "type": "module",
+  "exports": {
+    "./tui": {
+      "types": "./dist/tui.d.ts",
+      "import": "./dist/tui.js"
+    }
+  },
+  "files": ["dist/", "README.md", "LICENSE"],
+  "scripts": {
+    "build": "bun build tui.ts --outdir dist --target bun --format esm --external solid-js --external '@opentui/*' && tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "verify": "bun test && bun run typecheck"
+  },
+  "keywords": ["opencode", "opencode-plugin", "plugin", "git", "footer"],
+  "license": "MIT",
+  "peerDependencies": {
+    "@opencode-ai/plugin": ">=1.4.0"
+  },
+  "devDependencies": {
+    "@opencode-ai/plugin": "^1.4.7",
+    "@opentui/core": "0.4.5",
+    "@opentui/solid": "0.4.5",
+    "@types/bun": "^1.1.15",
+    "solid-js": "^1.9.10",
+    "typescript": "^5.9.3"
+  }
+}
