@@ -32,6 +32,16 @@ Layout: `src/git-status.ts` (pure `git status` runner), `src/tui-footer.tsx`
 (footer component + `describeBranch`/`abbreviateHome`), `src/git-footer.ts`
 (TUI glue: dirty signal + polling), `tui.ts` (TUI module entry).
 
+## Donate
+
+Support the project with crypto (Ethereum / ERC-20):
+
+```text
+ETH: YOUR_ETH_ADDRESS
+```
+
+> TODO: replace `YOUR_ETH_ADDRESS` with your wallet address once you've created one.
+
 ## License
 
 MIT — see `LICENSE`.
