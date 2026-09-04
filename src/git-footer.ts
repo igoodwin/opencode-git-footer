@@ -49,6 +49,8 @@ export function runGitFooter(api: TuiPluginApi, deps: GitFooterDeps = {}): GitFo
       api.event.on("file.edited", () => scheduleRefresh()),
       api.event.on("file.watcher.updated", () => scheduleRefresh()),
       api.event.on("command.executed", () => scheduleRefresh()),
+      api.event.on("session.next.shell.ended", () => scheduleRefresh()),
+      api.event.on("session.idle", () => scheduleRefresh()),
     )
   }
 

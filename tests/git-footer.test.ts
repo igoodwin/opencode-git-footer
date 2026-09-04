@@ -52,6 +52,38 @@ describe("runGitFooter", () => {
     handle.dispose()
   })
 
+  it("refreshes when a shell command ends (e.g. a git commit via the tool)", async () => {
+    const f = fakeApi()
+    const checkGitDirty = mock(async (_dir: string) => true)
+    const handle = runGitFooter(f.api, { checkGitDirty })
+    await Bun.sleep(10)
+
+    expect(checkGitDirty).toHaveBeenCalledTimes(1)
+
+    f.emit("session.next.shell.ended", { properties: { output: "" } })
+    await Bun.sleep(400)
+
+    expect(checkGitDirty).toHaveBeenCalledTimes(2)
+
+    handle.dispose()
+  })
+
+  it("refreshes when the session goes idle", async () => {
+    const f = fakeApi()
+    const checkGitDirty = mock(async (_dir: string) => true)
+    const handle = runGitFooter(f.api, { checkGitDirty })
+    await Bun.sleep(10)
+
+    expect(checkGitDirty).toHaveBeenCalledTimes(1)
+
+    f.emit("session.idle", {})
+    await Bun.sleep(400)
+
+    expect(checkGitDirty).toHaveBeenCalledTimes(2)
+
+    handle.dispose()
+  })
+
   it("registers a dispose hook with the host lifecycle", () => {
     const f = fakeApi()
     const handle = runGitFooter(f.api)
