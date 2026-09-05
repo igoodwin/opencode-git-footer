@@ -57,13 +57,17 @@ function Footer(props: { api: TuiPluginApi; state: GitFooterState }) {
   const path = createMemo(() => {
     const dir = props.state.activeDir() || api.state.path.directory || home()
     const branch = props.state.branch()
+    if (props.state.isWorktree()) {
+      const name = dir.split("/").filter(Boolean).at(-1) ?? dir
+      const label = branch && branch !== name ? `${name}:${branch}` : name
+      return { parent: "", name: `⧉ ${label}` }
+    }
     const out = abbreviateHome(dir, home())
     const text = branch ? `${out}:${branch}` : out
     const list = text.split("/")
-    const name = (props.state.isWorktree() ? "⧉ " : "") + (list.at(-1) ?? "")
     return {
       parent: list.slice(0, -1).join("/"),
-      name,
+      name: list.at(-1) ?? "",
     }
   })
 
@@ -105,7 +109,9 @@ function Footer(props: { api: TuiPluginApi; state: GitFooterState }) {
         </box>
       </Show>
       <box flexDirection="row" gap={0}>
-        <text fg={theme().textMuted}>{path().parent}/</text>
+        <Show when={path().parent}>
+          <text fg={theme().textMuted}>{path().parent}/</text>
+        </Show>
         <text fg={theme().text}>{path().name}</text>
         <text fg={dotColor()}>{branchInfo() ? " ●" : ""}</text>
       </box>
