@@ -1,6 +1,6 @@
 /** @jsxImportSource @opentui/solid */
 import type { TuiPluginApi } from "@opencode-ai/plugin/tui"
-import { createMemo, Show } from "solid-js"
+import { createMemo, Show, type Accessor } from "solid-js"
 import { homedir } from "node:os"
 
 export type BranchInfo = {
@@ -42,7 +42,9 @@ function Footer(props: { api: TuiPluginApi; sessionID: string; dirty: () => bool
   const branchInfo = createMemo(() => {
     const branch = api.state.vcs?.branch
     if (!branch) return undefined
-    return describeBranch(branch, props.dirty())
+    const info = describeBranch(branch, props.dirty())
+    if (!info) return undefined
+    return { ...info, dotColor: info.dirty ? theme().warning : theme().success }
   })
 
   const path = createMemo(() => {
@@ -57,8 +59,6 @@ function Footer(props: { api: TuiPluginApi; sessionID: string; dirty: () => bool
       name: list.at(-1) ?? "",
     }
   })
-
-  const dotColor = () => (branchInfo()?.dirty ? theme().warning : theme().success)
 
   return (
     <box gap={1}>
@@ -99,7 +99,9 @@ function Footer(props: { api: TuiPluginApi; sessionID: string; dirty: () => bool
         <span style={{ fg: theme().textMuted }}>{path().parent}/</span>
         <span style={{ fg: theme().text }}>{path().name}</span>
         <Show when={branchInfo()}>
-          <span style={{ fg: dotColor(), bold: true }}> ●</span>
+          {(info: Accessor<NonNullable<ReturnType<typeof branchInfo>>>) => (
+            <span style={{ fg: info().dotColor, bold: true }}> ●</span>
+          )}
         </Show>
       </text>
       <text fg={theme().textMuted}>
