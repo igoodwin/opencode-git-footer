@@ -36,7 +36,12 @@ describe("registerFooterSlot", () => {
       slots: { register: mock((plugin: unknown) => registered.push(plugin as never)) },
     } as any
 
-    registerFooterSlot(api, () => false)
+    registerFooterSlot(api, {
+      activeDir: () => undefined,
+      branch: () => undefined,
+      dirty: () => false,
+      isWorktree: () => false,
+    })
 
     expect(registered).toHaveLength(1)
     expect(registered[0].order).toBeLessThan(100)
