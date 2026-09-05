@@ -39,7 +39,7 @@ describe("runGitFooter", () => {
   it("checks dirty on init and refreshes on file.edited events", async () => {
     const f = fakeApi()
     const checkGitDirty = mock(async (_dir: string) => true)
-    const handle = runGitFooter(f.api, { checkGitDirty })
+    const handle = runGitFooter(f.api, { checkGitDirty, minRefreshMs: 0 })
     await Bun.sleep(10)
 
     expect(checkGitDirty).toHaveBeenCalledTimes(1)
@@ -55,7 +55,7 @@ describe("runGitFooter", () => {
   it("refreshes when a shell command ends (e.g. a git commit via the tool)", async () => {
     const f = fakeApi()
     const checkGitDirty = mock(async (_dir: string) => true)
-    const handle = runGitFooter(f.api, { checkGitDirty })
+    const handle = runGitFooter(f.api, { checkGitDirty, minRefreshMs: 0 })
     await Bun.sleep(10)
 
     expect(checkGitDirty).toHaveBeenCalledTimes(1)
@@ -71,7 +71,7 @@ describe("runGitFooter", () => {
   it("refreshes when the session goes idle", async () => {
     const f = fakeApi()
     const checkGitDirty = mock(async (_dir: string) => true)
-    const handle = runGitFooter(f.api, { checkGitDirty })
+    const handle = runGitFooter(f.api, { checkGitDirty, minRefreshMs: 0 })
     await Bun.sleep(10)
 
     expect(checkGitDirty).toHaveBeenCalledTimes(1)
@@ -103,7 +103,7 @@ describe("runGitFooter", () => {
       return () => {}
     })
 
-    const handle = runGitFooter(f.api, { checkGitDirty, resolveGitDir, watchGitFiles })
+    const handle = runGitFooter(f.api, { checkGitDirty, resolveGitDir, watchGitFiles, minRefreshMs: 0 })
     await Bun.sleep(10)
 
     expect(resolveGitDir).toHaveBeenCalledWith("/repo")
