@@ -106,18 +106,7 @@ function Footer(props: { api: TuiPluginApi; sessionID: string; dirty: () => bool
       <text>
         <span style={{ fg: theme().textMuted }}>{path().parent}/</span>
         <span style={{ fg: theme().text }}>{path().name}</span>
-        <Show when={branchInfo()} keyed>
-          {(info: NonNullable<ReturnType<typeof branchInfo>>) => {
-            try {
-              const { appendFileSync } = require("node:fs") as typeof import("node:fs")
-              appendFileSync(
-                "/tmp/opencode-git-footer-debug.log",
-                `${new Date().toISOString()} Show children dotColor=${JSON.stringify(info.dotColor?.toInts?.() ?? String(info.dotColor))}\n`,
-              )
-            } catch {}
-            return <span style={{ fg: info.dotColor, bold: true }}> ●</span>
-          }}
-        </Show>
+        <span style={{ fg: branchInfo()?.dotColor ?? theme().success, bold: true }}>{branchInfo() ? " ●" : ""}</span>
       </text>
       <text fg={theme().textMuted}>
         <span style={{ fg: theme().success }}>•</span> <b>Open</b>
