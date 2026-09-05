@@ -34,13 +34,12 @@ Layout: `src/git-status.ts` (pure `git status` runner), `src/tui-footer.tsx`
 
 ## Donate
 
-Support the project with crypto (Ethereum / ERC-20):
+Support the project with crypto:
 
-```text
-ETH: YOUR_ETH_ADDRESS
-```
-
-> TODO: replace `YOUR_ETH_ADDRESS` with your wallet address once you've created one.
+| BNB Smart Chain (BSC) | Tron |
+| --- | --- |
+| ![BNB Smart Chain](assets/donate-bsc.svg) | ![Tron](assets/donate-tron.svg) |
+| `0x1Df93A331CF8D5bE9d382B6d55fe227D6489B2a2` | `TDfatR9JWqcfx5VuTMHDLQP3BN6f8Ynk5r` |
 
 ## License
 
