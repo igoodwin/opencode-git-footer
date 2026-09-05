@@ -1,6 +1,6 @@
 import type { TuiPluginApi } from "@opencode-ai/plugin/tui"
 import { appendFileSync } from "node:fs"
-import { createSignal } from "solid-js"
+import { createSignal, createEffect } from "solid-js"
 import { isGitDirty, resolveGitDir } from "./git-status"
 import { watchGitFiles } from "./git-watch"
 import { registerFooterSlot } from "./tui-footer"
@@ -28,6 +28,9 @@ const MIN_REFRESH_MS = 1_000
 
 export function runGitFooter(api: TuiPluginApi, deps: GitFooterDeps = {}): GitFooterHandle {
   const [dirty, setDirty] = createSignal(false)
+  createEffect(() => {
+    debugLog(`createEffect fired dirty=${dirty()}`)
+  })
   const checkGitDirty = deps.checkGitDirty ?? ((dir: string) => isGitDirty(dir))
   const resolveDir = deps.resolveGitDir ?? ((dir: string) => resolveGitDir(dir))
   const startWatch = deps.watchGitFiles ?? ((gitDir: string, onChange: () => void) => watchGitFiles(gitDir, onChange))
