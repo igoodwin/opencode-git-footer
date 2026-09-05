@@ -53,11 +53,16 @@ export function findRelevantWorktree(
   return best
 }
 
-export function collectSessionFilePaths(api: TuiPluginApi, sessionID: string): string[] {
-  const paths = new Set<string>()
-  for (const message of api.state.session.messages(sessionID)) {
-    const parts = api.state.part(message.id) as unknown as PartLike[]
-    for (const file of filePathsFromParts(parts)) paths.add(file)
+export function collectSessionFilePaths(api: TuiPluginApi, sessionID: string | undefined): string[] {
+  if (!sessionID) return []
+  try {
+    const paths = new Set<string>()
+    for (const message of api.state.session.messages(sessionID)) {
+      const parts = api.state.part(message.id) as unknown as PartLike[]
+      for (const file of filePathsFromParts(parts)) paths.add(file)
+    }
+    return [...paths]
+  } catch {
+    return []
   }
-  return [...paths]
 }

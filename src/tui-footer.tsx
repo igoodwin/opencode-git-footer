@@ -1,10 +1,14 @@
 /** @jsxImportSource @opentui/solid */
 import type { TuiPluginApi } from "@opencode-ai/plugin/tui"
-import { createEffect, createMemo, Show } from "solid-js"
+import { createMemo, Show } from "solid-js"
 import { homedir } from "node:os"
-import { debugLog } from "./debug"
-import { listGitWorktrees } from "./git-status"
-import { collectSessionFilePaths, findRelevantWorktree } from "./session-files"
+
+export type GitFooterState = {
+  activeDir: () => string | undefined
+  branch: () => string | undefined
+  dirty: () => boolean
+  isWorktree: () => boolean
+}
 
 export type BranchInfo = {
   name: string
@@ -29,7 +33,7 @@ export function abbreviateHome(path: string, home: string): string {
   return path
 }
 
-function Footer(props: { api: TuiPluginApi; sessionID: string; dirty: () => boolean }) {
+function Footer(props: { api: TuiPluginApi; state: GitFooterState }) {
   const api = props.api
   const theme = () => api.theme.current
   const home = () => homedir()
@@ -43,48 +47,27 @@ function Footer(props: { api: TuiPluginApi; sessionID: string; dirty: () => bool
   const show = createMemo(() => !has() && !done())
 
   const branchInfo = createMemo(() => {
-    const branch = api.state.vcs?.branch
+    const branch = props.state.branch()
     if (!branch) return undefined
-    const info = describeBranch(branch, props.dirty())
+    const info = describeBranch(branch, props.state.dirty())
     if (!info) return undefined
     return { ...info, dotColor: info.dirty ? theme().warning : theme().success }
   })
 
   const path = createMemo(() => {
-    const session = api.state.session.get(props.sessionID)
-    const dir = session?.directory || api.state.path.directory || home()
-    const branch = session?.directory === api.state.path.directory ? api.state.vcs?.branch : undefined
+    const dir = props.state.activeDir() || api.state.path.directory || home()
+    const branch = props.state.branch()
     const out = abbreviateHome(dir, home())
     const text = branch ? `${out}:${branch}` : out
     const list = text.split("/")
+    const name = (props.state.isWorktree() ? "⧉ " : "") + (list.at(-1) ?? "")
     return {
       parent: list.slice(0, -1).join("/"),
-      name: list.at(-1) ?? "",
+      name,
     }
   })
 
   const dotColor = () => branchInfo()?.dotColor ?? theme().success
-
-  createEffect(() => {
-    const session = api.state.session.get(props.sessionID)
-    const files = collectSessionFilePaths(api, props.sessionID)
-    debugLog("footer", {
-      sessionID: props.sessionID,
-      session_directory: session?.directory,
-      session_path: session?.path,
-      path_directory: api.state.path.directory,
-      path_worktree: api.state.path.worktree,
-      vcs_branch: api.state.vcs?.branch,
-      session_files: files,
-    })
-    const dir = api.state.path.directory
-    if (!dir) return
-    void (async () => {
-      const worktrees = await listGitWorktrees(dir)
-      const relevant = findRelevantWorktree(files, worktrees, dir)
-      debugLog("relevant", { files, worktrees, relevant })
-    })()
-  })
 
   return (
     <box gap={1}>
@@ -137,12 +120,17 @@ function Footer(props: { api: TuiPluginApi; sessionID: string; dirty: () => bool
   )
 }
 
-export function registerFooterSlot(api: TuiPluginApi, dirty: () => boolean): void {
+export function registerFooterSlot(
+  api: TuiPluginApi,
+  state: GitFooterState,
+  onSession?: (sessionID: string) => void,
+): void {
   api.slots.register({
     order: 50,
     slots: {
       sidebar_footer(_ctx, props) {
-        return <Footer api={api} sessionID={props.session_id} dirty={dirty} />
+        onSession?.(props.session_id)
+        return <Footer api={api} state={state} />
       },
     },
   })

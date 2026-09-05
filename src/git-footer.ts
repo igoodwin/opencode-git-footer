@@ -1,8 +1,9 @@
 import type { TuiPluginApi } from "@opencode-ai/plugin/tui"
 import { createSignal } from "solid-js"
-import { isGitDirty, resolveGitDir, gitBranch, isGitWorktree, listGitWorktrees } from "./git-status"
+import { isGitDirty, resolveGitDir, gitBranch, isGitWorktree, listGitWorktrees, type GitWorktree } from "./git-status"
 import { watchGitFiles } from "./git-watch"
 import { registerFooterSlot } from "./tui-footer"
+import { collectSessionFilePaths, findRelevantWorktree } from "./session-files"
 import { debugLog } from "./debug"
 
 export type GitFooterDeps = {
@@ -10,7 +11,9 @@ export type GitFooterDeps = {
   resolveGitDir?: (dir: string) => Promise<string | undefined>
   gitBranch?: (dir: string) => Promise<string | undefined>
   isGitWorktree?: (dir: string) => Promise<boolean>
-  listGitWorktrees?: (dir: string) => Promise<import("./git-status").GitWorktree[]>
+  listGitWorktrees?: (dir: string) => Promise<GitWorktree[]>
+  collectSessionFilePaths?: (api: TuiPluginApi, sessionID?: string) => string[]
+  findRelevantWorktree?: (files: string[], worktrees: GitWorktree[], mainDirectory: string) => string | undefined
   watchGitFiles?: (gitDir: string, onChange: () => void) => () => void
   minRefreshMs?: number
 }
@@ -22,15 +25,25 @@ const DEBOUNCE_MS = 250
 const MIN_REFRESH_MS = 1_000
 
 export function runGitFooter(api: TuiPluginApi, deps: GitFooterDeps = {}): GitFooterHandle {
+  const [activeDir, setActiveDir] = createSignal<string | undefined>(undefined)
+  const [branch, setBranch] = createSignal<string | undefined>(undefined)
   const [dirty, setDirty] = createSignal(false)
+  const [isWorktree, setIsWorktree] = createSignal(false)
+
   const checkGitDirty = deps.checkGitDirty ?? ((dir: string) => isGitDirty(dir))
   const resolveDir = deps.resolveGitDir ?? ((dir: string) => resolveGitDir(dir))
   const getBranch = deps.gitBranch ?? ((dir: string) => gitBranch(dir))
   const checkWorktree = deps.isGitWorktree ?? ((dir: string) => isGitWorktree(dir))
   const getWorktrees = deps.listGitWorktrees ?? ((dir: string) => listGitWorktrees(dir))
+  const getSessionFiles = deps.collectSessionFilePaths ?? ((api: TuiPluginApi, sid?: string) => collectSessionFilePaths(api, sid))
+  const relevantWorktree = deps.findRelevantWorktree ?? findRelevantWorktree
   const startWatch = deps.watchGitFiles ?? ((gitDir: string, onChange: () => void) => watchGitFiles(gitDir, onChange))
   const minRefreshMs = deps.minRefreshMs ?? MIN_REFRESH_MS
-  registerFooterSlot(api, dirty)
+
+  let sessionID: string | undefined
+  registerFooterSlot(api, { activeDir, branch, dirty, isWorktree }, (sid) => {
+    sessionID = sid
+  })
 
   let seq = 0
   let debounceTimer: ReturnType<typeof setTimeout> | null = null
@@ -40,6 +53,19 @@ export function runGitFooter(api: TuiPluginApi, deps: GitFooterDeps = {}): GitFo
   let watchTarget: string | undefined
   let lastRefreshAt = 0
   let disposed = false
+
+  const determineActiveDir = async (dir: string) => {
+    const [worktrees, linked] = await Promise.all([getWorktrees(dir), checkWorktree(dir)])
+    // Launched directly inside a linked worktree: `dir` already is the right
+    // folder, no need to inspect the session.
+    let active = dir
+    if (!linked) {
+      const files = getSessionFiles(api, sessionID)
+      const found = relevantWorktree(files, worktrees, api.state.path.worktree || dir)
+      if (found) active = found
+    }
+    return { active, worktree: linked || active !== dir, worktrees }
+  }
 
   const refreshNow = async () => {
     const now = Date.now()
@@ -56,25 +82,26 @@ export function runGitFooter(api: TuiPluginApi, deps: GitFooterDeps = {}): GitFo
     try {
       const dir = api.state.path.directory
       if (!dir) return
-      if (dir !== watchTarget) void ensureWatch(dir)
       const n = ++seq
-      const [d, branch, linked, worktrees] = await Promise.all([
-        checkGitDirty(dir),
-        getBranch(dir),
-        checkWorktree(dir),
-        getWorktrees(dir),
-      ])
+      const { active, worktree, worktrees } = await determineActiveDir(dir)
+      if (active !== watchTarget) void ensureWatch(active)
+      const [d, br] = await Promise.all([checkGitDirty(active), getBranch(active)])
       debugLog("refresh", {
         directory: dir,
+        active,
         path_worktree: api.state.path.worktree,
         vcs_branch: api.state.vcs?.branch,
-        vcs_default_branch: api.state.vcs?.default_branch,
-        git_branch: branch,
-        is_linked_worktree: linked,
+        git_branch: br,
+        is_linked_worktree: worktree,
         dirty: d,
         worktrees,
       })
-      if (n === seq) setDirty(d)
+      if (n === seq) {
+        setDirty(d)
+        setBranch(br)
+        setActiveDir(active)
+        setIsWorktree(worktree)
+      }
     } catch {
       // keep the last known state on transient git/state errors
     }
