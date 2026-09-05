@@ -1,8 +1,17 @@
 import type { TuiPluginApi } from "@opencode-ai/plugin/tui"
+import { appendFileSync } from "node:fs"
 import { createSignal } from "solid-js"
 import { isGitDirty, resolveGitDir } from "./git-status"
 import { watchGitFiles } from "./git-watch"
 import { registerFooterSlot } from "./tui-footer"
+
+function debugLog(msg: string): void {
+  try {
+    appendFileSync("/tmp/opencode-git-footer-debug.log", `${new Date().toISOString()} ${msg}\n`)
+  } catch {
+    // ignore logging errors
+  }
+}
 
 export type GitFooterDeps = {
   checkGitDirty?: (dir: string) => Promise<boolean>
@@ -36,6 +45,7 @@ export function runGitFooter(api: TuiPluginApi, deps: GitFooterDeps = {}): GitFo
       if (dir !== watchTarget) void ensureWatch(dir)
       const n = ++seq
       const d = await checkGitDirty(dir)
+      debugLog(`refreshNow dir="${dir}" dirty=${d}`)
       if (n === seq) setDirty(d)
     } catch {
       // keep the last known state on transient git/state errors

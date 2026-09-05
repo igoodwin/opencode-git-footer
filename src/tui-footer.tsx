@@ -44,6 +44,10 @@ function Footer(props: { api: TuiPluginApi; sessionID: string; dirty: () => bool
     if (!branch) return undefined
     const info = describeBranch(branch, props.dirty())
     if (!info) return undefined
+    try {
+      const { appendFileSync } = require("node:fs") as typeof import("node:fs")
+      appendFileSync("/tmp/opencode-git-footer-debug.log", `${new Date().toISOString()} branchInfo branch="${branch}" dirty=${info.dirty}\n`)
+    } catch {}
     return { ...info, dotColor: info.dirty ? theme().warning : theme().success }
   })
 
