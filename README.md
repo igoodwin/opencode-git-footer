@@ -6,6 +6,21 @@ colored dot, plus the app version and a dismissible "getting started" banner.
 
 ## Install
 
+### From npm
+
+1. Add the plugin to `~/.config/opencode/tui.json`:
+
+```jsonc
+{
+  "plugin": ["opencode-git-footer"]
+}
+```
+
+2. Restart OpenCode. The package and its dependencies are installed
+   automatically at startup and cached under `~/.cache/opencode/node_modules/`.
+
+### From source
+
 1. `bun install && bun run build`
 2. Add the plugin to `~/.config/opencode/tui.json`:
 
