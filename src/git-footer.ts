@@ -1,12 +1,16 @@
 import type { TuiPluginApi } from "@opencode-ai/plugin/tui"
 import { createSignal } from "solid-js"
-import { isGitDirty, resolveGitDir } from "./git-status"
+import { isGitDirty, resolveGitDir, gitBranch, isGitWorktree, listGitWorktrees } from "./git-status"
 import { watchGitFiles } from "./git-watch"
 import { registerFooterSlot } from "./tui-footer"
+import { debugLog } from "./debug"
 
 export type GitFooterDeps = {
   checkGitDirty?: (dir: string) => Promise<boolean>
   resolveGitDir?: (dir: string) => Promise<string | undefined>
+  gitBranch?: (dir: string) => Promise<string | undefined>
+  isGitWorktree?: (dir: string) => Promise<boolean>
+  listGitWorktrees?: (dir: string) => Promise<import("./git-status").GitWorktree[]>
   watchGitFiles?: (gitDir: string, onChange: () => void) => () => void
   minRefreshMs?: number
 }
@@ -21,6 +25,9 @@ export function runGitFooter(api: TuiPluginApi, deps: GitFooterDeps = {}): GitFo
   const [dirty, setDirty] = createSignal(false)
   const checkGitDirty = deps.checkGitDirty ?? ((dir: string) => isGitDirty(dir))
   const resolveDir = deps.resolveGitDir ?? ((dir: string) => resolveGitDir(dir))
+  const getBranch = deps.gitBranch ?? ((dir: string) => gitBranch(dir))
+  const checkWorktree = deps.isGitWorktree ?? ((dir: string) => isGitWorktree(dir))
+  const getWorktrees = deps.listGitWorktrees ?? ((dir: string) => listGitWorktrees(dir))
   const startWatch = deps.watchGitFiles ?? ((gitDir: string, onChange: () => void) => watchGitFiles(gitDir, onChange))
   const minRefreshMs = deps.minRefreshMs ?? MIN_REFRESH_MS
   registerFooterSlot(api, dirty)
@@ -51,7 +58,22 @@ export function runGitFooter(api: TuiPluginApi, deps: GitFooterDeps = {}): GitFo
       if (!dir) return
       if (dir !== watchTarget) void ensureWatch(dir)
       const n = ++seq
-      const d = await checkGitDirty(dir)
+      const [d, branch, linked, worktrees] = await Promise.all([
+        checkGitDirty(dir),
+        getBranch(dir),
+        checkWorktree(dir),
+        getWorktrees(dir),
+      ])
+      debugLog("refresh", {
+        directory: dir,
+        path_worktree: api.state.path.worktree,
+        vcs_branch: api.state.vcs?.branch,
+        vcs_default_branch: api.state.vcs?.default_branch,
+        git_branch: branch,
+        is_linked_worktree: linked,
+        dirty: d,
+        worktrees,
+      })
       if (n === seq) setDirty(d)
     } catch {
       // keep the last known state on transient git/state errors
@@ -65,6 +87,7 @@ export function runGitFooter(api: TuiPluginApi, deps: GitFooterDeps = {}): GitFo
     watchDispose = null
     try {
       const gitDir = await resolveDir(dir)
+      debugLog("ensureWatch", { directory: dir, gitDir })
       if (!gitDir || disposed) return
       watchDispose = startWatch(gitDir, () => scheduleRefresh())
     } catch {

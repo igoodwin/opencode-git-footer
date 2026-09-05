@@ -1,7 +1,10 @@
 /** @jsxImportSource @opentui/solid */
 import type { TuiPluginApi } from "@opencode-ai/plugin/tui"
-import { createMemo, Show } from "solid-js"
+import { createEffect, createMemo, Show } from "solid-js"
 import { homedir } from "node:os"
+import { debugLog } from "./debug"
+import { listGitWorktrees } from "./git-status"
+import { collectSessionFilePaths, findRelevantWorktree } from "./session-files"
 
 export type BranchInfo = {
   name: string
@@ -61,6 +64,27 @@ function Footer(props: { api: TuiPluginApi; sessionID: string; dirty: () => bool
   })
 
   const dotColor = () => branchInfo()?.dotColor ?? theme().success
+
+  createEffect(() => {
+    const session = api.state.session.get(props.sessionID)
+    const files = collectSessionFilePaths(api, props.sessionID)
+    debugLog("footer", {
+      sessionID: props.sessionID,
+      session_directory: session?.directory,
+      session_path: session?.path,
+      path_directory: api.state.path.directory,
+      path_worktree: api.state.path.worktree,
+      vcs_branch: api.state.vcs?.branch,
+      session_files: files,
+    })
+    const dir = api.state.path.directory
+    if (!dir) return
+    void (async () => {
+      const worktrees = await listGitWorktrees(dir)
+      const relevant = findRelevantWorktree(files, worktrees, dir)
+      debugLog("relevant", { files, worktrees, relevant })
+    })()
+  })
 
   return (
     <box gap={1}>
