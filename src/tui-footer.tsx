@@ -68,6 +68,8 @@ function Footer(props: { api: TuiPluginApi; sessionID: string; dirty: () => bool
     }
   })
 
+  const dotColor = () => branchInfo()?.dotColor ?? theme().success
+
   return (
     <box gap={1}>
       <Show when={show()}>
@@ -103,11 +105,11 @@ function Footer(props: { api: TuiPluginApi; sessionID: string; dirty: () => bool
           </box>
         </box>
       </Show>
-      <text>
-        <span style={{ fg: theme().textMuted }}>{path().parent}/</span>
-        <span style={{ fg: theme().text }}>{path().name}</span>
-        <span style={{ fg: branchInfo()?.dotColor ?? theme().success, bold: true }}>{branchInfo() ? " ●" : ""}</span>
-      </text>
+      <box flexDirection="row" gap={0}>
+        <text fg={theme().textMuted}>{path().parent}/</text>
+        <text fg={theme().text}>{path().name}</text>
+        <text fg={dotColor()}>{branchInfo() ? " ●" : ""}</text>
+      </box>
       <text fg={theme().textMuted}>
         <span style={{ fg: theme().success }}>•</span> <b>Open</b>
         <span style={{ fg: theme().text }}>
