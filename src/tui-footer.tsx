@@ -44,11 +44,15 @@ function Footer(props: { api: TuiPluginApi; sessionID: string; dirty: () => bool
     if (!branch) return undefined
     const info = describeBranch(branch, props.dirty())
     if (!info) return undefined
+    const dotColor = info.dirty ? theme().warning : theme().success
     try {
       const { appendFileSync } = require("node:fs") as typeof import("node:fs")
-      appendFileSync("/tmp/opencode-git-footer-debug.log", `${new Date().toISOString()} branchInfo branch="${branch}" dirty=${info.dirty}\n`)
+      appendFileSync(
+        "/tmp/opencode-git-footer-debug.log",
+        `${new Date().toISOString()} branchInfo branch="${branch}" dirty=${info.dirty} dotColor=${JSON.stringify(dotColor?.toInts?.() ?? String(dotColor))} warning=${JSON.stringify(theme().warning?.toInts?.())} success=${JSON.stringify(theme().success?.toInts?.())}\n`,
+      )
     } catch {}
-    return { ...info, dotColor: info.dirty ? theme().warning : theme().success }
+    return { ...info, dotColor }
   })
 
   const path = createMemo(() => {
@@ -103,9 +107,16 @@ function Footer(props: { api: TuiPluginApi; sessionID: string; dirty: () => bool
         <span style={{ fg: theme().textMuted }}>{path().parent}/</span>
         <span style={{ fg: theme().text }}>{path().name}</span>
         <Show when={branchInfo()} keyed>
-          {(info: NonNullable<ReturnType<typeof branchInfo>>) => (
-            <span style={{ fg: info.dotColor, bold: true }}> ●</span>
-          )}
+          {(info: NonNullable<ReturnType<typeof branchInfo>>) => {
+            try {
+              const { appendFileSync } = require("node:fs") as typeof import("node:fs")
+              appendFileSync(
+                "/tmp/opencode-git-footer-debug.log",
+                `${new Date().toISOString()} Show children dotColor=${JSON.stringify(info.dotColor?.toInts?.() ?? String(info.dotColor))}\n`,
+              )
+            } catch {}
+            return <span style={{ fg: info.dotColor, bold: true }}> ●</span>
+          }}
         </Show>
       </text>
       <text fg={theme().textMuted}>
