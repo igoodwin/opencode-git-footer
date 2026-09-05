@@ -4,6 +4,15 @@ OpenCode TUI plugin that replaces the sidebar footer with a path + git branch
 indicator, marking the branch dirty (via `git status --porcelain`) with a
 colored dot, plus the app version and a dismissible "getting started" banner.
 
+### Git worktrees
+
+When you work in a linked worktree, the footer shows a compact `⧉` label
+instead of the full path, combining the worktree directory name and branch
+(`⧉ feature/foo`), or just the name when they match. If OpenCode is launched
+from the main repository but the active session touches files in a worktree,
+the footer automatically switches to that worktree and reflects its branch and
+dirty state.
+
 ## Install
 
 ### From npm

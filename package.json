@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
   "name": "opencode-git-footer",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "OpenCode TUI plugin — custom sidebar footer with git branch + dirty indicator",
   "type": "module",
   "exports": {
