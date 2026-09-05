@@ -10,7 +10,7 @@
       "import": "./dist/tui.js"
     }
   },
-  "files": ["dist/", "assets/", "README.md", "LICENSE"],
+  "files": ["dist/", "assets/", "README.md", "README.ru.md", "LICENSE"],
   "scripts": {
     "build": "bun run build.ts && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
