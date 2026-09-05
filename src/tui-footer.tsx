@@ -44,15 +44,7 @@ function Footer(props: { api: TuiPluginApi; sessionID: string; dirty: () => bool
     if (!branch) return undefined
     const info = describeBranch(branch, props.dirty())
     if (!info) return undefined
-    const dotColor = info.dirty ? theme().warning : theme().success
-    try {
-      const { appendFileSync } = require("node:fs") as typeof import("node:fs")
-      appendFileSync(
-        "/tmp/opencode-git-footer-debug.log",
-        `${new Date().toISOString()} branchInfo branch="${branch}" dirty=${info.dirty} dotColor=${JSON.stringify(dotColor?.toInts?.() ?? String(dotColor))} warning=${JSON.stringify(theme().warning?.toInts?.())} success=${JSON.stringify(theme().success?.toInts?.())}\n`,
-      )
-    } catch {}
-    return { ...info, dotColor }
+    return { ...info, dotColor: info.dirty ? theme().warning : theme().success }
   })
 
   const path = createMemo(() => {

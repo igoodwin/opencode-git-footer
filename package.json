@@ -12,7 +12,7 @@
   },
   "files": ["dist/", "README.md", "LICENSE"],
   "scripts": {
-    "build": "bun build tui.ts --outdir dist --target bun --format esm --external solid-js --external '@opentui/*' && tsc -p tsconfig.build.json",
+    "build": "bun run build.ts && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "test": "bun test",
     "verify": "bun test && bun run typecheck"

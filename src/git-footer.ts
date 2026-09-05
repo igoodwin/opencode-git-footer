@@ -1,17 +1,8 @@
 import type { TuiPluginApi } from "@opencode-ai/plugin/tui"
-import { appendFileSync } from "node:fs"
-import { createSignal, createEffect } from "solid-js"
+import { createSignal } from "solid-js"
 import { isGitDirty, resolveGitDir } from "./git-status"
 import { watchGitFiles } from "./git-watch"
 import { registerFooterSlot } from "./tui-footer"
-
-function debugLog(msg: string): void {
-  try {
-    appendFileSync("/tmp/opencode-git-footer-debug.log", `${new Date().toISOString()} ${msg}\n`)
-  } catch {
-    // ignore logging errors
-  }
-}
 
 export type GitFooterDeps = {
   checkGitDirty?: (dir: string) => Promise<boolean>
@@ -28,9 +19,6 @@ const MIN_REFRESH_MS = 1_000
 
 export function runGitFooter(api: TuiPluginApi, deps: GitFooterDeps = {}): GitFooterHandle {
   const [dirty, setDirty] = createSignal(false)
-  createEffect(() => {
-    debugLog(`createEffect fired dirty=${dirty()}`)
-  })
   const checkGitDirty = deps.checkGitDirty ?? ((dir: string) => isGitDirty(dir))
   const resolveDir = deps.resolveGitDir ?? ((dir: string) => resolveGitDir(dir))
   const startWatch = deps.watchGitFiles ?? ((gitDir: string, onChange: () => void) => watchGitFiles(gitDir, onChange))
@@ -64,7 +52,6 @@ export function runGitFooter(api: TuiPluginApi, deps: GitFooterDeps = {}): GitFo
       if (dir !== watchTarget) void ensureWatch(dir)
       const n = ++seq
       const d = await checkGitDirty(dir)
-      debugLog(`refreshNow dir="${dir}" dirty=${d}`)
       if (n === seq) setDirty(d)
     } catch {
       // keep the last known state on transient git/state errors
@@ -79,14 +66,13 @@ export function runGitFooter(api: TuiPluginApi, deps: GitFooterDeps = {}): GitFo
     try {
       const gitDir = await resolveDir(dir)
       if (!gitDir || disposed) return
-      watchDispose = startWatch(gitDir, () => scheduleRefresh("git-watch"))
+      watchDispose = startWatch(gitDir, () => scheduleRefresh())
     } catch {
       // watcher is best-effort; the poll still keeps dirty state fresh
     }
   }
 
-  const scheduleRefresh = (source: string) => {
-    debugLog(`scheduleRefresh source=${source}`)
+  const scheduleRefresh = () => {
     if (debounceTimer) clearTimeout(debounceTimer)
     debounceTimer = setTimeout(() => {
       debounceTimer = null
@@ -97,12 +83,12 @@ export function runGitFooter(api: TuiPluginApi, deps: GitFooterDeps = {}): GitFo
   const unsubs: Array<() => void> = []
   if (api.event) {
     unsubs.push(
-      api.event.on("vcs.branch.updated", () => scheduleRefresh("vcs.branch.updated")),
-      api.event.on("file.edited", () => scheduleRefresh("file.edited")),
-      api.event.on("file.watcher.updated", () => scheduleRefresh("file.watcher.updated")),
-      api.event.on("command.executed", () => scheduleRefresh("command.executed")),
-      api.event.on("session.next.shell.ended", () => scheduleRefresh("session.next.shell.ended")),
-      api.event.on("session.idle", () => scheduleRefresh("session.idle")),
+      api.event.on("vcs.branch.updated", () => scheduleRefresh()),
+      api.event.on("file.edited", () => scheduleRefresh()),
+      api.event.on("file.watcher.updated", () => scheduleRefresh()),
+      api.event.on("command.executed", () => scheduleRefresh()),
+      api.event.on("session.next.shell.ended", () => scheduleRefresh()),
+      api.event.on("session.idle", () => scheduleRefresh()),
     )
   }
 
