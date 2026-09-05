@@ -1,6 +1,6 @@
 /** @jsxImportSource @opentui/solid */
 import type { TuiPluginApi } from "@opencode-ai/plugin/tui"
-import { createMemo, Show, type Accessor } from "solid-js"
+import { createMemo, Show } from "solid-js"
 import { homedir } from "node:os"
 
 export type BranchInfo = {
@@ -98,9 +98,9 @@ function Footer(props: { api: TuiPluginApi; sessionID: string; dirty: () => bool
       <text>
         <span style={{ fg: theme().textMuted }}>{path().parent}/</span>
         <span style={{ fg: theme().text }}>{path().name}</span>
-        <Show when={branchInfo()}>
-          {(info: Accessor<NonNullable<ReturnType<typeof branchInfo>>>) => (
-            <span style={{ fg: info().dotColor, bold: true }}> ●</span>
+        <Show when={branchInfo()} keyed>
+          {(info: NonNullable<ReturnType<typeof branchInfo>>) => (
+            <span style={{ fg: info.dotColor, bold: true }}> ●</span>
           )}
         </Show>
       </text>

@@ -9,7 +9,20 @@ import { watch } from "node:fs"
  * disposer is a no-op.
  */
 export function watchGitFiles(gitDir: string, onChange: () => void): () => void {
-  const targets = new Set(["HEAD", "index"])
+  // `.git` direct children that indicate the working-tree/branch state changed.
+  // Includes the `.lock` variants because bun's `fs.watch` reports the lock file
+  // but not the atomic `index` rename (node reports both).
+  const targets = new Set([
+    "HEAD",
+    "HEAD.lock",
+    "index",
+    "index.lock",
+    "COMMIT_EDITMSG",
+    "ORIG_HEAD",
+    "MERGE_HEAD",
+    "REBASE_HEAD",
+    "CHERRY_PICK_HEAD",
+  ])
   let watcher: ReturnType<typeof watch> | null = null
   try {
     watcher = watch(gitDir, (_event, filename) => {
