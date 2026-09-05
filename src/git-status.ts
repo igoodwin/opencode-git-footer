@@ -1,3 +1,5 @@
+import path from "node:path"
+
 export type CommandRunner = (cmd: string, args: string[], cwd: string) => Promise<string>
 
 /** `git status --porcelain` output is dirty iff it has any non-whitespace line. */
@@ -26,4 +28,20 @@ export async function bunCommandRunner(cmd: string, args: string[], cwd: string)
 /** Convenience: is the working tree at `dir` dirty? */
 export async function isGitDirty(dir: string, run: CommandRunner = bunCommandRunner): Promise<boolean> {
   return isDirty(await runGitStatus(dir, run))
+}
+
+/**
+ * Resolve the actual `.git` directory for `dir` via `git rev-parse --git-dir`.
+ * Handles worktrees (where `.git` is a file pointing at the real dir) and
+ * returns `undefined` when `dir` is not a git repo.
+ */
+export async function resolveGitDir(dir: string, run: CommandRunner = bunCommandRunner): Promise<string | undefined> {
+  try {
+    const out = await run("git", ["rev-parse", "--git-dir"], dir)
+    const gitDir = out.trim()
+    if (!gitDir) return undefined
+    return path.isAbsolute(gitDir) ? gitDir : path.join(dir, gitDir)
+  } catch {
+    return undefined
+  }
 }

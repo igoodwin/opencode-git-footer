@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test"
-import { isDirty, runGitStatus, isGitDirty, type CommandRunner } from "../src/git-status"
+import { isDirty, runGitStatus, isGitDirty, resolveGitDir, type CommandRunner } from "../src/git-status"
 
 describe("isDirty", () => {
   it("returns false for empty output", () => {
@@ -47,5 +47,30 @@ describe("isGitDirty", () => {
   it("returns false when porcelain output is empty", async () => {
     const run: CommandRunner = async () => ""
     expect(await isGitDirty("/work/repo", run)).toBe(false)
+  })
+})
+
+describe("resolveGitDir", () => {
+  it("returns an absolute git dir unchanged", async () => {
+    const calls: Array<{ cmd: string; args: string[]; cwd: string }> = []
+    const run: CommandRunner = async (cmd, args, cwd) => {
+      calls.push({ cmd, args, cwd })
+      return "/work/repo/.git\n"
+    }
+
+    expect(await resolveGitDir("/work/repo", run)).toBe("/work/repo/.git")
+    expect(calls).toEqual([{ cmd: "git", args: ["rev-parse", "--git-dir"], cwd: "/work/repo" }])
+  })
+
+  it("resolves a relative git dir against the repo root", async () => {
+    const run: CommandRunner = async () => ".git\n"
+    expect(await resolveGitDir("/work/repo", run)).toBe("/work/repo/.git")
+  })
+
+  it("returns undefined when the runner throws (not a repo)", async () => {
+    const run: CommandRunner = async () => {
+      throw new Error("exit 128")
+    }
+    expect(await resolveGitDir("/not/a/repo", run)).toBeUndefined()
   })
 })

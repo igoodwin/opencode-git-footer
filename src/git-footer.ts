@@ -1,10 +1,13 @@
 import type { TuiPluginApi } from "@opencode-ai/plugin/tui"
 import { createSignal } from "solid-js"
-import { isGitDirty } from "./git-status"
+import { isGitDirty, resolveGitDir } from "./git-status"
+import { watchGitFiles } from "./git-watch"
 import { registerFooterSlot } from "./tui-footer"
 
 export type GitFooterDeps = {
   checkGitDirty?: (dir: string) => Promise<boolean>
+  resolveGitDir?: (dir: string) => Promise<string | undefined>
+  watchGitFiles?: (gitDir: string, onChange: () => void) => () => void
 }
 
 export type GitFooterHandle = { dispose(): void }
@@ -15,22 +18,41 @@ const DEBOUNCE_MS = 250
 export function runGitFooter(api: TuiPluginApi, deps: GitFooterDeps = {}): GitFooterHandle {
   const [dirty, setDirty] = createSignal(false)
   const checkGitDirty = deps.checkGitDirty ?? ((dir: string) => isGitDirty(dir))
+  const resolveDir = deps.resolveGitDir ?? ((dir: string) => resolveGitDir(dir))
+  const startWatch = deps.watchGitFiles ?? ((gitDir: string, onChange: () => void) => watchGitFiles(gitDir, onChange))
   registerFooterSlot(api, dirty)
 
   let seq = 0
   let debounceTimer: ReturnType<typeof setTimeout> | null = null
   let pollTimer: ReturnType<typeof setInterval> | null = null
+  let watchDispose: (() => void) | null = null
+  let watchTarget: string | undefined
   let disposed = false
 
   const refreshNow = async () => {
     try {
       const dir = api.state.path.directory
       if (!dir) return
+      if (dir !== watchTarget) void ensureWatch(dir)
       const n = ++seq
       const d = await checkGitDirty(dir)
       if (n === seq) setDirty(d)
     } catch {
       // keep the last known state on transient git/state errors
+    }
+  }
+
+  const ensureWatch = async (dir: string) => {
+    if (disposed) return
+    watchTarget = dir
+    watchDispose?.()
+    watchDispose = null
+    try {
+      const gitDir = await resolveDir(dir)
+      if (!gitDir || disposed) return
+      watchDispose = startWatch(gitDir, () => scheduleRefresh())
+    } catch {
+      // watcher is best-effort; the poll still keeps dirty state fresh
     }
   }
 
@@ -61,6 +83,8 @@ export function runGitFooter(api: TuiPluginApi, deps: GitFooterDeps = {}): GitFo
     debounceTimer = null
     if (pollTimer) clearInterval(pollTimer)
     pollTimer = null
+    watchDispose?.()
+    watchDispose = null
     for (const unsub of unsubs.splice(0)) unsub()
   }
 

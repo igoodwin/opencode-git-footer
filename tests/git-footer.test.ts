@@ -92,4 +92,46 @@ describe("runGitFooter", () => {
 
     handle.dispose()
   })
+
+  it("watches the git dir and refreshes on index/HEAD change", async () => {
+    const f = fakeApi()
+    const checkGitDirty = mock(async (_dir: string) => true)
+    const resolveGitDir = mock(async (_dir: string) => "/repo/.git")
+    let onChange: (() => void) | undefined
+    const watchGitFiles = mock((_gitDir: string, cb: () => void) => {
+      onChange = cb
+      return () => {}
+    })
+
+    const handle = runGitFooter(f.api, { checkGitDirty, resolveGitDir, watchGitFiles })
+    await Bun.sleep(10)
+
+    expect(resolveGitDir).toHaveBeenCalledWith("/repo")
+    expect(watchGitFiles).toHaveBeenCalledWith("/repo/.git", expect.any(Function))
+    expect(checkGitDirty).toHaveBeenCalledTimes(1)
+
+    onChange!()
+    await Bun.sleep(400)
+
+    expect(checkGitDirty).toHaveBeenCalledTimes(2)
+
+    handle.dispose()
+  })
+
+  it("disposes the git watcher on dispose", async () => {
+    const f = fakeApi()
+    const disposed: Array<string> = []
+    const resolveGitDir = mock(async (_dir: string) => "/repo/.git")
+    const watchGitFiles = mock((_gitDir: string, _cb: () => void) => () => disposed.push("watch"))
+
+    const handle = runGitFooter(f.api, {
+      checkGitDirty: mock(async () => false),
+      resolveGitDir,
+      watchGitFiles,
+    })
+    await Bun.sleep(10)
+
+    handle.dispose()
+    expect(disposed).toContain("watch")
+  })
 })
