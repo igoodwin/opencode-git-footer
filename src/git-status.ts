@@ -10,7 +10,10 @@ export function isDirty(porcelainOutput: string): boolean {
 /** Run `git status --porcelain`; returns `""` when the runner fails (not a repo, git missing). */
 export async function runGitStatus(dir: string, run: CommandRunner): Promise<string> {
   try {
-    return await run("git", ["status", "--porcelain"], dir)
+    // --no-optional-locks stops git from refreshing .git/index (and creating
+    // .git/index.lock) on a read-only status; otherwise the watcher sees the
+    // lock it just created and re-triggers forever.
+    return await run("git", ["--no-optional-locks", "status", "--porcelain"], dir)
   } catch {
     return ""
   }

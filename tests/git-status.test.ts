@@ -25,7 +25,7 @@ describe("runGitStatus", () => {
 
     const out = await runGitStatus("/work/repo", run)
 
-    expect(calls).toEqual([{ cmd: "git", args: ["status", "--porcelain"], cwd: "/work/repo" }])
+    expect(calls).toEqual([{ cmd: "git", args: ["--no-optional-locks", "status", "--porcelain"], cwd: "/work/repo" }])
     expect(out).toBe(" M a.ts")
   })
 
